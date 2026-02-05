@@ -1,0 +1,1825 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>车辆油品管理系统</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#1a73e8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="./style.css">
+    <script src="./app.js" defer></script>
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+            .then(registration => {
+            console.log('ServiceWorker注册成功: ', registration.scope);
+            })
+            .catch(err => {
+            console.log('ServiceWorker注册失败: ', err);
+            });
+        });
+    }
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+
+        :root {
+            --primary-blue: #1a73e8;
+            --light-blue: #e8f0fe;
+            --accent-blue: #4285f4;
+            --dark-blue: #0d47a1;
+            --white: #ffffff;
+            --light-gray: #f8f9fa;
+            --medium-gray: #e0e0e0;
+            --text-dark: #202124;
+            --text-light: #5f6368;
+            --success: #34a853;
+            --warning: #fbbc04;
+            --danger: #ea4335;
+            --info: #4285f4;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary-blue), var(--dark-blue));
+            color: white;
+            padding: 20px 0;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(26, 115, 232, 0.2);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo i {
+            font-size: 2.5rem;
+        }
+
+        .logo h1 {
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        .logo p {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .notification-bell {
+            position: relative;
+            cursor: pointer;
+            font-size: 1.5rem;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: var(--danger);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tabs {
+            display: flex;
+            background-color: var(--white);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 18px 20px;
+            text-align: center;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab:hover {
+            background-color: var(--light-blue);
+        }
+
+        .tab.active {
+            color: var(--primary-blue);
+            border-bottom: 3px solid var(--primary-blue);
+            background-color: rgba(26, 115, 232, 0.05);
+        }
+
+        .tab-content {
+            display: none;
+            background-color: var(--white);
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--medium-gray);
+            color: var(--primary-blue);
+        }
+
+        .section-title i {
+            font-size: 1.5rem;
+        }
+
+        .section-title h2 {
+            font-size: 1.8rem;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--medium-gray);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 900px;
+        }
+
+        th {
+            background-color: var(--primary-blue);
+            color: white;
+            font-weight: 600;
+            padding: 16px 12px;
+            text-align: left;
+            position: sticky;
+            top: 0;
+        }
+
+        td {
+            padding: 14px 12px;
+            border-bottom: 1px solid var(--medium-gray);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background-color: var(--light-blue);
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--medium-gray);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            transition: border 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--dark-blue);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background-color: var(--light-gray);
+            color: var(--text-dark);
+            border: 1px solid var(--medium-gray);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--medium-gray);
+        }
+
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+        }
+
+        .btn-warning {
+            background-color: var(--warning);
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .status-danger {
+            background-color: rgba(234, 67, 53, 0.1);
+            color: var(--danger);
+        }
+
+        .status-warning {
+            background-color: rgba(251, 188, 4, 0.1);
+            color: #b06c00;
+        }
+
+        .status-safe {
+            background-color: rgba(52, 168, 83, 0.1);
+            color: var(--success);
+        }
+
+        .status-info {
+            background-color: rgba(66, 133, 244, 0.1);
+            color: var(--primary-blue);
+        }
+
+        .alert-panel {
+            background-color: var(--light-blue);
+            border-left: 4px solid var(--primary-blue);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+
+        .alert-panel h3 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            color: var(--primary-blue);
+        }
+
+        .alert-panel p {
+            margin-bottom: 10px;
+        }
+
+        .row-colors {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: var(--light-gray);
+            border-radius: 8px;
+        }
+
+        .color-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .color-box {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .color-red { background-color: rgba(234, 67, 53, 0.8); }
+        .color-yellow { background-color: rgba(251, 188, 4, 0.8); }
+        .color-cyan { background-color: rgba(0, 188, 212, 0.8); }
+        .color-white { background-color: var(--white); border: 1px solid var(--medium-gray); }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            color: var(--primary-blue);
+            font-size: 1.5rem;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-light);
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+            margin-top: 40px;
+        }
+
+        .export-options {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1024px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .tab {
+                border-bottom: 1px solid var(--medium-gray);
+                border-right: none;
+            }
+            
+            .tab.active {
+                border-bottom: 3px solid var(--primary-blue);
+                border-right: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-oil-can"></i>
+                    <div>
+                        <h1>车辆油品管理系统</h1>
+                        <p>基于Excel VBA逻辑的Web实现版本</p>
+                    </div>
+                </div>
+                <div class="notification-bell" id="notificationBell">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge" id="notificationCount">0</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="black-oil">
+                <i class="fas fa-oil-can"></i> 黑油管理
+            </div>
+            <div class="tab" data-tab="gear-oil">
+                <i class="fas fa-cogs"></i> 齿轮油管理
+            </div>
+            <div class="tab" data-tab="prediction">
+                <i class="fas fa-chart-line"></i> 预测值
+            </div>
+            <div class="tab" data-tab="alerts">
+                <i class="fas fa-exclamation-triangle"></i> 通知中心
+            </div>
+        </div>
+
+        <!-- 黑油管理 -->
+        <div class="tab-content active" id="black-oil">
+            <div class="section-title">
+                <i class="fas fa-oil-can"></i>
+                <h2>黑油管理</h2>
+            </div>
+            
+            <div class="row-colors">
+                <div class="color-indicator">
+                    <div class="color-box color-red"></div>
+                    <span>剩余里程 ≤ 500km (需要更换)</span>
+                </div>
+                <div class="color-indicator">
+                    <div class="color-box color-yellow"></div>
+                    <span>剩余里程 ≤ 1000km (提醒)</span>
+                </div>
+                <div class="color-indicator">
+                    <div class="color-box color-cyan"></div>
+                    <span>超过3天未更新</span>
+                </div>
+                <div class="color-indicator">
+                    <div class="color-box color-white"></div>
+                    <span>正常状态</span>
+                </div>
+            </div>
+
+            <div class="alert-panel">
+                <h3><i class="fas fa-info-circle"></i> 操作说明</h3>
+                <p>1. 车牌号(A列)必须唯一，重复输入将被清除</p>
+                <p>2. 输入总里程(C列)时，将自动填充B列和D列日期，并计算剩余里程(G列)</p>
+                <p>3. 输入消耗里程(E列)时，如果C-E小于-2000将提示错误，减少数值时需要确认</p>
+                <p>4. 修改D列日期将自动更新B列保养日期</p>
+            </div>
+
+            <div class="table-container">
+                <table id="blackOilTable">
+                    <thead>
+                        <tr>
+                            <th>A: 车牌号</th>
+                            <th>B: 下次保养日期</th>
+                            <th>C: 总里程 (km)</th>
+                            <th>D: 录入日期</th>
+                            <th>E: 消耗里程 (km)</th>
+                            <th>F: 更新日期</th>
+                            <th>G: 剩余里程 (km)</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="blackOilBody">
+                        <!-- 数据行将通过JavaScript动态添加 -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-primary" id="addBlackOilRow">
+                    <i class="fas fa-plus"></i> 添加新行
+                </button>
+                <button class="btn btn-secondary" id="checkBlackOilAlerts">
+                    <i class="fas fa-exclamation-triangle"></i> 检查警报
+                </button>
+                <button class="btn btn-secondary" id="exportBlackOil">
+                    <i class="fas fa-file-export"></i> 导出数据
+                </button>
+            </div>
+        </div>
+
+        <!-- 齿轮油管理 -->
+        <div class="tab-content" id="gear-oil">
+            <div class="section-title">
+                <i class="fas fa-cogs"></i>
+                <h2>齿轮油管理</h2>
+            </div>
+            
+            <div class="row-colors">
+                <div class="color-indicator">
+                    <div class="color-box color-red"></div>
+                    <span>剩余里程 ≤ 5000km (需要更换)</span>
+                </div>
+                <div class="color-indicator">
+                    <div class="color-box color-yellow"></div>
+                    <span>剩余里程 ≤ 10000km (提醒)</span>
+                </div>
+                <div class="color-indicator">
+                    <div class="color-box color-cyan"></div>
+                    <span>超过3天未更新</span>
+                </div>
+                <div class="color-indicator">
+                    <div class="color-box color-white"></div>
+                    <span>正常状态</span>
+                </div>
+            </div>
+
+            <div class="alert-panel">
+                <h3><i class="fas fa-info-circle"></i> 操作说明</h3>
+                <p>1. 齿轮油管理逻辑与黑油类似，但阈值不同（5000km和10000km）</p>
+                <p>2. 车牌号必须唯一</p>
+                <p>3. 自动计算剩余里程并更新行颜色</p>
+                <p>4. 系统每10秒自动刷新数据</p>
+            </div>
+
+            <div class="table-container">
+                <table id="gearOilTable">
+                    <thead>
+                        <tr>
+                            <th>A: 车牌号</th>
+                            <th>B: 下次保养日期</th>
+                            <th>C: 总里程 (km)</th>
+                            <th>D: 录入日期</th>
+                            <th>E: 消耗里程 (km)</th>
+                            <th>F: 更新日期</th>
+                            <th>G: 剩余里程 (km)</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gearOilBody">
+                        <!-- 数据行将通过JavaScript动态添加 -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-primary" id="addGearOilRow">
+                    <i class="fas fa-plus"></i> 添加新行
+                </button>
+                <button class="btn btn-secondary" id="checkGearOilAlerts">
+                    <i class="fas fa-exclamation-triangle"></i> 检查警报
+                </button>
+                <button class="btn btn-secondary" id="toggleAutoRefresh">
+                    <i class="fas fa-sync-alt"></i> 开启自动刷新
+                </button>
+                <button class="btn btn-secondary" id="exportGearOil">
+                    <i class="fas fa-file-export"></i> 导出数据
+                </button>
+            </div>
+        </div>
+
+        <!-- 预测值 -->
+        <div class="tab-content" id="prediction">
+            <div class="section-title">
+                <i class="fas fa-chart-line"></i>
+                <h2>预测更换管理</h2>
+            </div>
+
+            <div class="alert-panel">
+                <h3><i class="fas fa-info-circle"></i> 操作说明</h3>
+                <p>1. 在A列输入车牌号，B列输入计划行驶里程</p>
+                <p>2. 系统将自动从黑油和齿轮油表中匹配数据并计算剩余里程</p>
+                <p>3. 自动生成更换提醒（红色：需要更换，黄色：提醒，绿色：安全）</p>
+                <p>4. 仅B列为手动输入，其他列均为自动计算</p>
+            </div>
+
+            <div class="table-container">
+                <table id="predictionTable">
+                    <thead>
+                        <tr>
+                            <th>A: 车牌号</th>
+                            <th>B: 计划里程 (km)</th>
+                            <th>C: 黑油当前里程</th>
+                            <th>D: 黑油下次保养里程</th>
+                            <th>E: 黑油最终剩余里程</th>
+                            <th>F: 黑油提醒</th>
+                            <th>G: 齿轮油当前里程</th>
+                            <th>H: 齿轮油下次保养里程</th>
+                            <th>I: 齿轮油最终剩余里程</th>
+                            <th>J: 齿轮油提醒</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="predictionBody">
+                        <!-- 数据行将通过JavaScript动态添加 -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-primary" id="addPredictionRow">
+                    <i class="fas fa-plus"></i> 添加新行
+                </button>
+                <button class="btn btn-secondary" id="calculatePredictions">
+                    <i class="fas fa-calculator"></i> 重新计算
+                </button>
+                <button class="btn btn-secondary" id="exportPredictions">
+                    <i class="fas fa-file-export"></i> 导出数据
+                </button>
+            </div>
+        </div>
+
+        <!-- 通知中心 -->
+        <div class="tab-content" id="alerts">
+            <div class="section-title">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h2>通知中心</h2>
+            </div>
+
+            <div class="alert-panel">
+                <h3><i class="fas fa-cog"></i> 系统设置</h3>
+                <p>通知邮箱: yongshun272@gmail.com</p>
+                <p>最后检查时间: <span id="lastCheckTime">尚未检查</span></p>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-primary" id="checkAllAlerts">
+                    <i class="fas fa-search"></i> 检查所有警报
+                </button>
+                <button class="btn btn-warning" id="sendEmailAlerts">
+                    <i class="fas fa-envelope"></i> 发送邮件通知
+                </button>
+                <button class="btn btn-secondary" id="clearAlerts">
+                    <i class="fas fa-trash"></i> 清除所有通知
+                </button>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <h3 style="color: var(--primary-blue); margin-bottom: 15px;">黑油更换提醒</h3>
+                <div id="blackOilAlerts" class="alert-panel" style="min-height: 100px;">
+                    <!-- 警报内容将通过JavaScript动态添加 -->
+                </div>
+                
+                <h3 style="color: var(--primary-blue); margin-bottom: 15px; margin-top: 30px;">齿轮油更换提醒</h3>
+                <div id="gearOilAlerts" class="alert-panel" style="min-height: 100px;">
+                    <!-- 警报内容将通过JavaScript动态添加 -->
+                </div>
+                
+                <h3 style="color: var(--primary-blue); margin-bottom: 15px; margin-top: 30px;">数据更新提醒</h3>
+                <div id="updateAlerts" class="alert-panel" style="min-height: 100px;">
+                    <!-- 警报内容将通过JavaScript动态添加 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 通知模态框 -->
+        <div class="modal" id="notificationModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-bell"></i> 系统通知</h3>
+                    <button class="close-modal" id="closeNotificationModal">&times;</button>
+                </div>
+                <div id="notificationContent">
+                    <!-- 通知内容将通过JavaScript动态添加 -->
+                </div>
+                <div style="margin-top: 20px; text-align: right;">
+                    <button class="btn btn-primary" id="confirmNotification">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>车辆油品管理系统 &copy; 2023 | 基于Excel VBA逻辑的Web实现 | 主题: 蓝白色</p>
+        <p>使用本地存储保存数据，刷新页面不会丢失</p>
+    </footer>
+
+    <script>
+        // 全局变量
+        let autoRefreshInterval;
+        let autoRefreshEnabled = false;
+        
+        // 初始化数据
+        const initialBlackOilData = [
+            { plate: "QM8517L", nextService: "2024-05-15", totalMileage: 85000, entryDate: "2023-05-15", consumedMileage: 82000, updateDate: "2023-11-20", remaining: 3000 },
+            { plate: "QAA2805W", nextService: "2024-03-10", totalMileage: 120000, entryDate: "2023-03-10", consumedMileage: 118000, updateDate: "2023-10-25", remaining: 2000 },
+            { plate: "Q2805", nextService: "2024-06-20", totalMileage: 75000, entryDate: "2023-06-20", consumedMileage: 73000, updateDate: "2023-12-01", remaining: 2000 },
+            { plate: "ABC1234", nextService: "2024-02-28", totalMileage: 95000, entryDate: "2023-02-28", consumedMileage: 94000, updateDate: "2023-11-15", remaining: 1000 }
+        ];
+        
+        const initialGearOilData = [
+            { plate: "QM8517L", nextService: "2024-08-15", totalMileage: 85000, entryDate: "2023-08-15", consumedMileage: 80000, updateDate: "2023-11-20", remaining: 5000 },
+            { plate: "QAA2805W", nextService: "2024-05-10", totalMileage: 120000, entryDate: "2023-05-10", consumedMileage: 115000, updateDate: "2023-10-25", remaining: 5000 },
+            { plate: "Q2805", nextService: "2024-09-20", totalMileage: 75000, entryDate: "2023-09-20", consumedMileage: 70000, updateDate: "2023-12-01", remaining: 5000 },
+            { plate: "XYZ5678", nextService: "2024-04-30", totalMileage: 110000, entryDate: "2023-04-30", consumedMileage: 108000, updateDate: "2023-11-10", remaining: 2000 }
+        ];
+        
+        const initialPredictionData = [
+            { plate: "QM8517L", plannedMileage: 3000, blackCurrent: 85000, blackNext: 88000, blackRemaining: 0, blackAlert: "需要更换", gearCurrent: 85000, gearNext: 90000, gearRemaining: 2000, gearAlert: "提醒" },
+            { plate: "QAA2805W", plannedMileage: 5000, blackCurrent: 120000, blackNext: 125000, blackRemaining: 0, blackAlert: "需要更换", gearCurrent: 120000, gearNext: 130000, gearRemaining: 5000, gearAlert: "提醒" }
+        ];
+
+        // 从localStorage加载数据或使用初始数据
+        let blackOilData = JSON.parse(localStorage.getItem('blackOilData')) || initialBlackOilData;
+        let gearOilData = JSON.parse(localStorage.getItem('gearOilData')) || initialGearOilData;
+        let predictionData = JSON.parse(localStorage.getItem('predictionData')) || initialPredictionData;
+        
+        // DOM加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initTabs();
+            initBlackOilTable();
+            initGearOilTable();
+            initPredictionTable();
+            initEventListeners();
+            checkAlertsOnLoad();
+            
+            // 更新最后检查时间
+            updateLastCheckTime();
+        });
+        
+        // 初始化选项卡
+        function initTabs() {
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const targetTab = this.getAttribute('data-tab');
+                    
+                    // 移除所有活动的标签和内容
+                    tabs.forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    
+                    // 激活当前标签和内容
+                    this.classList.add('active');
+                    document.getElementById(targetTab).classList.add('active');
+                    
+                    // 如果切换到预测值标签，重新计算预测值
+                    if (targetTab === 'prediction') {
+                        calculateAllPredictions();
+                    }
+                    
+                    // 如果切换到通知中心，更新通知
+                    if (targetTab === 'alerts') {
+                        updateAlertsDisplay();
+                    }
+                });
+            });
+        }
+        
+        // 初始化黑油表格
+        function initBlackOilTable() {
+            const tbody = document.getElementById('blackOilBody');
+            tbody.innerHTML = '';
+            
+            blackOilData.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.setAttribute('data-index', index);
+                
+                // 根据剩余里程设置行颜色
+                const rowColor = getBlackOilRowColor(item.remaining, item.updateDate);
+                row.style.backgroundColor = rowColor;
+                
+                row.innerHTML = `
+                    <td><input type="text" class="plate-input" value="${item.plate}" data-field="plate"></td>
+                    <td><input type="date" value="${item.nextService}" data-field="nextService"></td>
+                    <td><input type="number" min="0" value="${item.totalMileage}" data-field="totalMileage"></td>
+                    <td><input type="date" value="${item.entryDate}" data-field="entryDate"></td>
+                    <td><input type="number" min="0" value="${item.consumedMileage}" data-field="consumedMileage"></td>
+                    <td><input type="date" value="${item.updateDate}" data-field="updateDate"></td>
+                    <td><span class="status-badge ${getRemainingStatusClass(item.remaining, 'black')}">${item.remaining} km</span></td>
+                    <td>
+                        <button class="btn btn-danger btn-sm delete-row"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+            
+            // 添加事件监听器
+            addBlackOilEventListeners();
+        }
+        
+        // 获取黑油行颜色
+        function getBlackOilRowColor(remaining, updateDate) {
+            // 如果剩余里程小于等于500，红色
+            if (remaining <= 500) return 'rgba(234, 67, 53, 0.1)';
+            
+            // 如果剩余里程小于等于1000，黄色
+            if (remaining <= 1000) return 'rgba(251, 188, 4, 0.1)';
+            
+            // 检查是否超过3天未更新
+            if (updateDate) {
+                const update = new Date(updateDate);
+                const today = new Date();
+                const diffTime = Math.abs(today - update);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (diffDays > 3) return 'rgba(0, 188, 212, 0.1)';
+            }
+            
+            // 默认白色
+            return '#ffffff';
+        }
+        
+        // 初始化齿轮油表格
+        function initGearOilTable() {
+            const tbody = document.getElementById('gearOilBody');
+            tbody.innerHTML = '';
+            
+            gearOilData.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.setAttribute('data-index', index);
+                
+                // 根据剩余里程设置行颜色
+                const rowColor = getGearOilRowColor(item.remaining, item.updateDate);
+                row.style.backgroundColor = rowColor;
+                
+                row.innerHTML = `
+                    <td><input type="text" class="plate-input" value="${item.plate}" data-field="plate"></td>
+                    <td><input type="date" value="${item.nextService}" data-field="nextService"></td>
+                    <td><input type="number" min="0" value="${item.totalMileage}" data-field="totalMileage"></td>
+                    <td><input type="date" value="${item.entryDate}" data-field="entryDate"></td>
+                    <td><input type="number" min="0" value="${item.consumedMileage}" data-field="consumedMileage"></td>
+                    <td><input type="date" value="${item.updateDate}" data-field="updateDate"></td>
+                    <td><span class="status-badge ${getRemainingStatusClass(item.remaining, 'gear')}">${item.remaining} km</span></td>
+                    <td>
+                        <button class="btn btn-danger btn-sm delete-row"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+            
+            // 添加事件监听器
+            addGearOilEventListeners();
+        }
+        
+        // 获取齿轮油行颜色
+        function getGearOilRowColor(remaining, updateDate) {
+            // 如果剩余里程小于等于5000，红色
+            if (remaining <= 5000) return 'rgba(234, 67, 53, 0.1)';
+            
+            // 如果剩余里程小于等于10000，黄色
+            if (remaining <= 10000) return 'rgba(251, 188, 4, 0.1)';
+            
+            // 检查是否超过3天未更新
+            if (updateDate) {
+                const update = new Date(updateDate);
+                const today = new Date();
+                const diffTime = Math.abs(today - update);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (diffDays > 3) return 'rgba(0, 188, 212, 0.1)';
+            }
+            
+            // 默认白色
+            return '#ffffff';
+        }
+        
+        // 初始化预测值表格
+        function initPredictionTable() {
+            const tbody = document.getElementById('predictionBody');
+            tbody.innerHTML = '';
+            
+            predictionData.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.setAttribute('data-index', index);
+                
+                row.innerHTML = `
+                    <td><input type="text" class="plate-input" value="${item.plate}" data-field="plate"></td>
+                    <td><input type="number" min="0" value="${item.plannedMileage}" data-field="plannedMileage"></td>
+                    <td>${item.blackCurrent}</td>
+                    <td>${item.blackNext}</td>
+                    <td>${item.blackRemaining}</td>
+                    <td><span class="status-badge ${getAlertStatusClass(item.blackAlert)}">${item.blackAlert}</span></td>
+                    <td>${item.gearCurrent}</td>
+                    <td>${item.gearNext}</td>
+                    <td>${item.gearRemaining}</td>
+                    <td><span class="status-badge ${getAlertStatusClass(item.gearAlert)}">${item.gearAlert}</span></td>
+                    <td>
+                        <button class="btn btn-danger btn-sm delete-row"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+            
+            // 添加事件监听器
+            addPredictionEventListeners();
+        }
+        
+        // 获取剩余里程状态类
+        function getRemainingStatusClass(remaining, type) {
+            if (type === 'black') {
+                if (remaining <= 500) return 'status-danger';
+                if (remaining <= 1000) return 'status-warning';
+                return 'status-safe';
+            } else {
+                if (remaining <= 5000) return 'status-danger';
+                if (remaining <= 10000) return 'status-warning';
+                return 'status-safe';
+            }
+        }
+        
+        // 获取警报状态类
+        function getAlertStatusClass(alert) {
+            if (alert.includes('需要更换')) return 'status-danger';
+            if (alert.includes('提醒')) return 'status-warning';
+            if (alert.includes('安全')) return 'status-safe';
+            return 'status-info';
+        }
+        
+        // 初始化事件监听器
+        function initEventListeners() {
+            // 黑油表格按钮
+            document.getElementById('addBlackOilRow').addEventListener('click', addBlackOilRow);
+            document.getElementById('checkBlackOilAlerts').addEventListener('click', checkBlackOilAlerts);
+            document.getElementById('exportBlackOil').addEventListener('click', exportBlackOil);
+            
+            // 齿轮油表格按钮
+            document.getElementById('addGearOilRow').addEventListener('click', addGearOilRow);
+            document.getElementById('checkGearOilAlerts').addEventListener('click', checkGearOilAlerts);
+            document.getElementById('toggleAutoRefresh').addEventListener('click', toggleAutoRefresh);
+            document.getElementById('exportGearOil').addEventListener('click', exportGearOil);
+            
+            // 预测值表格按钮
+            document.getElementById('addPredictionRow').addEventListener('click', addPredictionRow);
+            document.getElementById('calculatePredictions').addEventListener('click', calculateAllPredictions);
+            document.getElementById('exportPredictions').addEventListener('click', exportPredictions);
+            
+            // 通知中心按钮
+            document.getElementById('checkAllAlerts').addEventListener('click', checkAllAlerts);
+            document.getElementById('sendEmailAlerts').addEventListener('click', sendEmailAlerts);
+            document.getElementById('clearAlerts').addEventListener('click', clearAlerts);
+            
+            // 通知模态框
+            document.getElementById('notificationBell').addEventListener('click', showNotifications);
+            document.getElementById('closeNotificationModal').addEventListener('click', closeNotificationModal);
+            document.getElementById('confirmNotification').addEventListener('click', closeNotificationModal);
+            
+            // 点击模态框外部关闭
+            document.getElementById('notificationModal').addEventListener('click', function(e) {
+                if (e.target === this) closeNotificationModal();
+            });
+        }
+        
+        // 添加黑油行事件监听器
+        function addBlackOilEventListeners() {
+            const inputs = document.querySelectorAll('#blackOilBody input');
+            inputs.forEach(input => {
+                input.addEventListener('change', handleBlackOilInputChange);
+            });
+            
+            const deleteButtons = document.querySelectorAll('#blackOilBody .delete-row');
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const row = this.closest('tr');
+                    const index = parseInt(row.getAttribute('data-index'));
+                    deleteBlackOilRow(index);
+                });
+            });
+            
+            // 车牌号输入的特殊处理
+            const plateInputs = document.querySelectorAll('#blackOilBody .plate-input');
+            plateInputs.forEach(input => {
+                input.addEventListener('blur', function() {
+                    checkPlateDuplicate(this.value, 'black', parseInt(this.closest('tr').getAttribute('data-index')));
+                });
+            });
+        }
+        
+        // 添加齿轮油行事件监听器
+        function addGearOilEventListeners() {
+            const inputs = document.querySelectorAll('#gearOilBody input');
+            inputs.forEach(input => {
+                input.addEventListener('change', handleGearOilInputChange);
+            });
+            
+            const deleteButtons = document.querySelectorAll('#gearOilBody .delete-row');
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const row = this.closest('tr');
+                    const index = parseInt(row.getAttribute('data-index'));
+                    deleteGearOilRow(index);
+                });
+            });
+            
+            // 车牌号输入的特殊处理
+            const plateInputs = document.querySelectorAll('#gearOilBody .plate-input');
+            plateInputs.forEach(input => {
+                input.addEventListener('blur', function() {
+                    checkPlateDuplicate(this.value, 'gear', parseInt(this.closest('tr').getAttribute('data-index')));
+                });
+            });
+        }
+        
+        // 添加预测值行事件监听器
+        function addPredictionEventListeners() {
+            const inputs = document.querySelectorAll('#predictionBody input');
+            inputs.forEach(input => {
+                input.addEventListener('change', handlePredictionInputChange);
+            });
+            
+            const deleteButtons = document.querySelectorAll('#predictionBody .delete-row');
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const row = this.closest('tr');
+                    const index = parseInt(row.getAttribute('data-index'));
+                    deletePredictionRow(index);
+                });
+            });
+        }
+        
+        // 处理黑油输入变化
+        function handleBlackOilInputChange(e) {
+            const row = e.target.closest('tr');
+            const index = parseInt(row.getAttribute('data-index'));
+            const field = e.target.getAttribute('data-field');
+            const value = e.target.value;
+            
+            // 更新数据
+            blackOilData[index][field] = value;
+            
+            // 特殊处理逻辑
+            if (field === 'totalMileage') {
+                // C列变化：更新B列和D列日期，计算剩余里程
+                if (value && !isNaN(value) && value > 0) {
+                    const today = new Date().toISOString().split('T')[0];
+                    const nextYear = new Date();
+                    nextYear.setFullYear(nextYear.getFullYear() + 1);
+                    const nextYearDate = nextYear.toISOString().split('T')[0];
+                    
+                    blackOilData[index].nextService = nextYearDate;
+                    blackOilData[index].entryDate = today;
+                    
+                    // 计算剩余里程
+                    if (blackOilData[index].consumedMileage) {
+                        blackOilData[index].remaining = value - blackOilData[index].consumedMileage;
+                    }
+                }
+            } else if (field === 'consumedMileage') {
+                // E列变化：检查C-E >= -2000，更新F列日期，计算剩余里程
+                if (value && !isNaN(value) && value > 0) {
+                    // 检查C-E >= -2000
+                    const totalMileage = blackOilData[index].totalMileage;
+                    if (totalMileage && (totalMileage - value) < -2000) {
+                        showNotification('C-E差值不能小于-2000！请调整。', 'error');
+                        e.target.value = blackOilData[index].consumedMileage; // 恢复原值
+                        return;
+                    }
+                    
+                    // 如果新值小于旧值，需要确认
+                    const oldValue = blackOilData[index].consumedMileage;
+                    if (parseFloat(value) < parseFloat(oldValue)) {
+                        if (!confirm(`减少消耗里程从 ${oldValue} 到 ${value}？\n(确定=继续，取消=恢复)`)) {
+                            e.target.value = oldValue;
+                            return;
+                        }
+                    }
+                    
+                    // 更新F列日期
+                    blackOilData[index].updateDate = new Date().toISOString().split('T')[0];
+                    
+                    // 计算剩余里程
+                    if (blackOilData[index].totalMileage) {
+                        blackOilData[index].remaining = blackOilData[index].totalMileage - value;
+                    }
+                }
+            } else if (field === 'entryDate') {
+                // D列变化：同步更新B列保养日期
+                if (value) {
+                    const entryDate = new Date(value);
+                    entryDate.setFullYear(entryDate.getFullYear() + 1);
+                    blackOilData[index].nextService = entryDate.toISOString().split('T')[0];
+                }
+            }
+            
+            // 保存数据并刷新表格
+            saveData();
+            initBlackOilTable();
+            
+            // 更新预测值（如果车牌号匹配）
+            updatePredictionsForPlate(blackOilData[index].plate);
+        }
+        
+        // 处理齿轮油输入变化
+        function handleGearOilInputChange(e) {
+            const row = e.target.closest('tr');
+            const index = parseInt(row.getAttribute('data-index'));
+            const field = e.target.getAttribute('data-field');
+            const value = e.target.value;
+            
+            // 更新数据
+            gearOilData[index][field] = value;
+            
+            // 特殊处理逻辑（与黑油类似但阈值不同）
+            if (field === 'totalMileage') {
+                // C列变化：更新B列和D列日期，计算剩余里程
+                if (value && !isNaN(value) && value > 0) {
+                    const today = new Date().toISOString().split('T')[0];
+                    const nextYear = new Date();
+                    nextYear.setFullYear(nextYear.getFullYear() + 1);
+                    const nextYearDate = nextYear.toISOString().split('T')[0];
+                    
+                    gearOilData[index].nextService = nextYearDate;
+                    gearOilData[index].entryDate = today;
+                    
+                    // 计算剩余里程
+                    if (gearOilData[index].consumedMileage) {
+                        gearOilData[index].remaining = value - gearOilData[index].consumedMileage;
+                    }
+                }
+            } else if (field === 'consumedMileage') {
+                // E列变化：检查C-E >= -10000，更新F列日期，计算剩余里程
+                if (value && !isNaN(value) && value > 0) {
+                    // 检查C-E >= -10000
+                    const totalMileage = gearOilData[index].totalMileage;
+                    if (totalMileage && (totalMileage - value) < -10000) {
+                        showNotification('C-E差值不能小于-10000！请调整。', 'error');
+                        e.target.value = gearOilData[index].consumedMileage; // 恢复原值
+                        return;
+                    }
+                    
+                    // 如果新值小于旧值，需要确认
+                    const oldValue = gearOilData[index].consumedMileage;
+                    if (parseFloat(value) < parseFloat(oldValue)) {
+                        if (!confirm(`减少消耗里程从 ${oldValue} 到 ${value}？\n(确定=继续，取消=恢复)`)) {
+                            e.target.value = oldValue;
+                            return;
+                        }
+                    }
+                    
+                    // 更新F列日期
+                    gearOilData[index].updateDate = new Date().toISOString().split('T')[0];
+                    
+                    // 计算剩余里程
+                    if (gearOilData[index].totalMileage) {
+                        gearOilData[index].remaining = gearOilData[index].totalMileage - value;
+                    }
+                }
+            } else if (field === 'entryDate') {
+                // D列变化：同步更新B列保养日期
+                if (value) {
+                    const entryDate = new Date(value);
+                    entryDate.setFullYear(entryDate.getFullYear() + 1);
+                    gearOilData[index].nextService = entryDate.toISOString().split('T')[0];
+                }
+            }
+            
+            // 保存数据并刷新表格
+            saveData();
+            initGearOilTable();
+            
+            // 更新预测值（如果车牌号匹配）
+            updatePredictionsForPlate(gearOilData[index].plate);
+        }
+        
+        // 处理预测值输入变化
+        function handlePredictionInputChange(e) {
+            const row = e.target.closest('tr');
+            const index = parseInt(row.getAttribute('data-index'));
+            const field = e.target.getAttribute('data-field');
+            const value = e.target.value;
+            
+            // 更新数据
+            predictionData[index][field] = value;
+            
+            // 如果是B列（计划里程）或A列（车牌号）变化，重新计算
+            if (field === 'plannedMileage' || field === 'plate') {
+                calculatePredictionRow(index);
+            }
+            
+            // 保存数据并刷新表格
+            saveData();
+            initPredictionTable();
+        }
+        
+        // 检查车牌号是否重复
+        function checkPlateDuplicate(plate, type, currentIndex) {
+            if (!plate) return;
+            
+            let data, tableId;
+            if (type === 'black') {
+                data = blackOilData;
+                tableId = 'blackOilTable';
+            } else {
+                data = gearOilData;
+                tableId = 'gearOilTable';
+            }
+            
+            // 检查是否有重复（排除当前行）
+            for (let i = 0; i < data.length; i++) {
+                if (i !== currentIndex && data[i].plate === plate) {
+                    showNotification('车牌号重复！请输入唯一值。', 'warning');
+                    
+                    // 清除输入
+                    const inputs = document.querySelectorAll(`#${tableId} .plate-input`);
+                    inputs[currentIndex].value = '';
+                    
+                    // 清除数据
+                    data[currentIndex].plate = '';
+                    saveData();
+                    
+                    break;
+                }
+            }
+        }
+        
+        // 添加黑油行
+        function addBlackOilRow() {
+            const newRow = {
+                plate: '',
+                nextService: new Date().toISOString().split('T')[0],
+                totalMileage: 0,
+                entryDate: new Date().toISOString().split('T')[0],
+                consumedMileage: 0,
+                updateDate: new Date().toISOString().split('T')[0],
+                remaining: 0
+            };
+            
+            blackOilData.push(newRow);
+            saveData();
+            initBlackOilTable();
+        }
+        
+        // 添加齿轮油行
+        function addGearOilRow() {
+            const newRow = {
+                plate: '',
+                nextService: new Date().toISOString().split('T')[0],
+                totalMileage: 0,
+                entryDate: new Date().toISOString().split('T')[0],
+                consumedMileage: 0,
+                updateDate: new Date().toISOString().split('T')[0],
+                remaining: 0
+            };
+            
+            gearOilData.push(newRow);
+            saveData();
+            initGearOilTable();
+        }
+        
+        // 添加预测值行
+        function addPredictionRow() {
+            const newRow = {
+                plate: '',
+                plannedMileage: 0,
+                blackCurrent: 0,
+                blackNext: 0,
+                blackRemaining: 0,
+                blackAlert: '',
+                gearCurrent: 0,
+                gearNext: 0,
+                gearRemaining: 0,
+                gearAlert: ''
+            };
+            
+            predictionData.push(newRow);
+            saveData();
+            initPredictionTable();
+        }
+        
+        // 删除黑油行
+        function deleteBlackOilRow(index) {
+            if (confirm('确定删除此行吗？')) {
+                blackOilData.splice(index, 1);
+                saveData();
+                initBlackOilTable();
+            }
+        }
+        
+        // 删除齿轮油行
+        function deleteGearOilRow(index) {
+            if (confirm('确定删除此行吗？')) {
+                gearOilData.splice(index, 1);
+                saveData();
+                initGearOilTable();
+            }
+        }
+        
+        // 删除预测值行
+        function deletePredictionRow(index) {
+            if (confirm('确定删除此行吗？')) {
+                predictionData.splice(index, 1);
+                saveData();
+                initPredictionTable();
+            }
+        }
+        
+        // 计算预测值行
+        function calculatePredictionRow(index) {
+            const prediction = predictionData[index];
+            const plate = prediction.plate;
+            const plannedMileage = parseFloat(prediction.plannedMileage) || 0;
+            
+            // 从黑油数据中查找匹配的车牌号
+            const blackOilItem = blackOilData.find(item => item.plate === plate);
+            if (blackOilItem) {
+                prediction.blackCurrent = parseFloat(blackOilItem.consumedMileage) || 0;
+                prediction.blackNext = parseFloat(blackOilItem.totalMileage) || 0;
+                prediction.blackRemaining = prediction.blackNext - prediction.blackCurrent - plannedMileage;
+                
+                // 设置黑油提醒
+                if (prediction.blackRemaining <= 0) {
+                    prediction.blackAlert = '需要更换黑油 (已超期)';
+                } else if (prediction.blackRemaining <= 1000) {
+                    prediction.blackAlert = '黑油提醒 (剩余不足)';
+                } else {
+                    prediction.blackAlert = '黑油安全';
+                }
+            } else {
+                prediction.blackCurrent = 0;
+                prediction.blackNext = 0;
+                prediction.blackRemaining = 0;
+                prediction.blackAlert = '无黑油数据';
+            }
+            
+            // 从齿轮油数据中查找匹配的车牌号
+            const gearOilItem = gearOilData.find(item => item.plate === plate);
+            if (gearOilItem) {
+                prediction.gearCurrent = parseFloat(gearOilItem.consumedMileage) || 0;
+                prediction.gearNext = parseFloat(gearOilItem.totalMileage) || 0;
+                prediction.gearRemaining = prediction.gearNext - prediction.gearCurrent - plannedMileage;
+                
+                // 设置齿轮油提醒
+                if (prediction.gearRemaining <= 0) {
+                    prediction.gearAlert = '需要更换齿轮油 (已超期)';
+                } else if (prediction.gearRemaining <= 10000) {
+                    prediction.gearAlert = '齿轮油提醒 (剩余不足)';
+                } else {
+                    prediction.gearAlert = '齿轮油安全';
+                }
+            } else {
+                prediction.gearCurrent = 0;
+                prediction.gearNext = 0;
+                prediction.gearRemaining = 0;
+                prediction.gearAlert = '无齿轮油数据';
+            }
+            
+            // 保存数据
+            saveData();
+        }
+        
+        // 计算所有预测值
+        function calculateAllPredictions() {
+            predictionData.forEach((item, index) => {
+                calculatePredictionRow(index);
+            });
+            
+            initPredictionTable();
+            showNotification('预测值计算完成！', 'success');
+        }
+        
+        // 更新指定车牌号的预测值
+        function updatePredictionsForPlate(plate) {
+            predictionData.forEach((item, index) => {
+                if (item.plate === plate) {
+                    calculatePredictionRow(index);
+                }
+            });
+            
+            initPredictionTable();
+        }
+        
+        // 检查黑油警报
+        function checkBlackOilAlerts() {
+            let alertCount = 0;
+            let alertMessage = '';
+            
+            blackOilData.forEach(item => {
+                if (item.remaining <= 500) {
+                    alertCount++;
+                    alertMessage += `车牌: ${item.plate}\n剩余: ${item.remaining}km 黑油需要更换\n\n`;
+                } else if (item.remaining <= 1000) {
+                    alertCount++;
+                    alertMessage += `车牌: ${item.plate}\n剩余: ${item.remaining}km 黑油提醒\n\n`;
+                }
+                
+                // 检查是否超过3天未更新
+                if (item.updateDate) {
+                    const update = new Date(item.updateDate);
+                    const today = new Date();
+                    const diffTime = Math.abs(today - update);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays > 3) {
+                        alertCount++;
+                        alertMessage += `车牌: ${item.plate}\n最后更新: ${item.updateDate}\n需要更新消耗数据\n\n`;
+                    }
+                }
+            });
+            
+            if (alertCount > 0) {
+                showNotification(`黑油警报 (${alertCount}个): \n\n${alertMessage}`, 'warning');
+            } else {
+                showNotification('没有黑油警报。', 'success');
+            }
+            
+            updateNotificationBadge();
+            updateLastCheckTime();
+        }
+        
+        // 检查齿轮油警报
+        function checkGearOilAlerts() {
+            let alertCount = 0;
+            let alertMessage = '';
+            
+            gearOilData.forEach(item => {
+                if (item.remaining <= 5000) {
+                    alertCount++;
+                    alertMessage += `车牌: ${item.plate}\n剩余: ${item.remaining}km 齿轮油需要更换\n\n`;
+                } else if (item.remaining <= 10000) {
+                    alertCount++;
+                    alertMessage += `车牌: ${item.plate}\n剩余: ${item.remaining}km 齿轮油提醒\n\n`;
+                }
+                
+                // 检查是否超过3天未更新
+                if (item.updateDate) {
+                    const update = new Date(item.updateDate);
+                    const today = new Date();
+                    const diffTime = Math.abs(today - update);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays > 3) {
+                        alertCount++;
+                        alertMessage += `车牌: ${item.plate}\n最后更新: ${item.updateDate}\n需要更新消耗数据\n\n`;
+                    }
+                }
+            });
+            
+            if (alertCount > 0) {
+                showNotification(`齿轮油警报 (${alertCount}个): \n\n${alertMessage}`, 'warning');
+            } else {
+                showNotification('没有齿轮油警报。', 'success');
+            }
+            
+            updateNotificationBadge();
+            updateLastCheckTime();
+        }
+        
+        // 检查所有警报
+        function checkAllAlerts() {
+            checkBlackOilAlerts();
+            checkGearOilAlerts();
+            updateAlertsDisplay();
+            showNotification('所有警报检查完成！', 'success');
+        }
+        
+        // 切换自动刷新
+        function toggleAutoRefresh() {
+            const button = document.getElementById('toggleAutoRefresh');
+            
+            if (autoRefreshEnabled) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshEnabled = false;
+                button.innerHTML = '<i class="fas fa-sync-alt"></i> 开启自动刷新';
+                button.classList.remove('btn-success');
+                button.classList.add('btn-secondary');
+                showNotification('自动刷新已关闭', 'info');
+            } else {
+                autoRefreshEnabled = true;
+                autoRefreshInterval = setInterval(function() {
+                    initGearOilTable();
+                    updateNotificationBadge();
+                    console.log('自动刷新完成: ' + new Date().toLocaleTimeString());
+                }, 10000); // 每10秒刷新一次
+                
+                button.innerHTML = '<i class="fas fa-stop-circle"></i> 停止自动刷新';
+                button.classList.remove('btn-secondary');
+                button.classList.add('btn-success');
+                showNotification('自动刷新已开启 (每10秒刷新)', 'success');
+            }
+        }
+        
+        // 页面加载时检查警报
+        function checkAlertsOnLoad() {
+            // 延迟执行，确保DOM完全加载
+            setTimeout(() => {
+                updateNotificationBadge();
+                updateAlertsDisplay();
+            }, 1000);
+        }
+        
+        // 更新通知徽章
+        function updateNotificationBadge() {
+            let alertCount = 0;
+            
+            // 检查黑油警报
+            blackOilData.forEach(item => {
+                if (item.remaining <= 1000) alertCount++;
+                
+                // 检查是否超过3天未更新
+                if (item.updateDate) {
+                    const update = new Date(item.updateDate);
+                    const today = new Date();
+                    const diffTime = Math.abs(today - update);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    if (diffDays > 3) alertCount++;
+                }
+            });
+            
+            // 检查齿轮油警报
+            gearOilData.forEach(item => {
+                if (item.remaining <= 10000) alertCount++;
+                
+                // 检查是否超过3天未更新
+                if (item.updateDate) {
+                    const update = new Date(item.updateDate);
+                    const today = new Date();
+                    const diffTime = Math.abs(today - update);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    if (diffDays > 3) alertCount++;
+                }
+            });
+            
+            const badge = document.getElementById('notificationCount');
+            badge.textContent = alertCount;
+            badge.style.display = alertCount > 0 ? 'flex' : 'none';
+        }
+        
+        // 更新警报显示
+        function updateAlertsDisplay() {
+            // 黑油警报
+            let blackOilAlertHTML = '';
+            blackOilData.forEach(item => {
+                if (item.remaining <= 500) {
+                    blackOilAlertHTML += `<p><strong>车牌: ${item.plate}</strong> - 剩余: ${item.remaining}km - <span class="status-badge status-danger">需要更换</span></p>`;
+                } else if (item.remaining <= 1000) {
+                    blackOilAlertHTML += `<p><strong>车牌: ${item.plate}</strong> - 剩余: ${item.remaining}km - <span class="status-badge status-warning">提醒</span></p>`;
+                }
+            });
+            document.getElementById('blackOilAlerts').innerHTML = blackOilAlertHTML || '<p>没有黑油更换提醒。</p>';
+            
+            // 齿轮油警报
+            let gearOilAlertHTML = '';
+            gearOilData.forEach(item => {
+                if (item.remaining <= 5000) {
+                    gearOilAlertHTML += `<p><strong>车牌: ${item.plate}</strong> - 剩余: ${item.remaining}km - <span class="status-badge status-danger">需要更换</span></p>`;
+                } else if (item.remaining <= 10000) {
+                    gearOilAlertHTML += `<p><strong>车牌: ${item.plate}</strong> - 剩余: ${item.remaining}km - <span class="status-badge status-warning">提醒</span></p>`;
+                }
+            });
+            document.getElementById('gearOilAlerts').innerHTML = gearOilAlertHTML || '<p>没有齿轮油更换提醒。</p>';
+            
+            // 更新提醒
+            let updateAlertHTML = '';
+            const today = new Date();
+            
+            // 检查黑油更新
+            blackOilData.forEach(item => {
+                if (item.updateDate) {
+                    const update = new Date(item.updateDate);
+                    const diffTime = Math.abs(today - update);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays > 3) {
+                        updateAlertHTML += `<p><strong>车牌: ${item.plate}</strong> - 最后更新: ${item.updateDate} - <span class="status-badge status-info">需要更新数据</span></p>`;
+                    }
+                }
+            });
+            
+            // 检查齿轮油更新
+            gearOilData.forEach(item => {
+                if (item.updateDate) {
+                    const update = new Date(item.updateDate);
+                    const diffTime = Math.abs(today - update);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays > 3) {
+                        updateAlertHTML += `<p><strong>车牌: ${item.plate}</strong> - 最后更新: ${item.updateDate} - <span class="status-badge status-info">需要更新数据</span></p>`;
+                    }
+                }
+            });
+            
+            document.getElementById('updateAlerts').innerHTML = updateAlertHTML || '<p>没有数据更新提醒。</p>';
+            
+            updateNotificationBadge();
+            updateLastCheckTime();
+        }
+        
+        // 发送邮件警报
+        function sendEmailAlerts() {
+            // 在实际应用中，这里会调用后端API发送邮件
+            // 这里我们只模拟发送
+            showNotification('警报邮件已发送到 yongshun272@gmail.com', 'success');
+            updateLastCheckTime();
+        }
+        
+        // 清除所有警报
+        function clearAlerts() {
+            if (confirm('确定清除所有通知吗？')) {
+                // 重置通知徽章
+                document.getElementById('notificationCount').textContent = '0';
+                document.getElementById('notificationCount').style.display = 'none';
+                
+                // 清空警报显示
+                document.getElementById('blackOilAlerts').innerHTML = '<p>没有黑油更换提醒。</p>';
+                document.getElementById('gearOilAlerts').innerHTML = '<p>没有齿轮油更换提醒。</p>';
+                document.getElementById('updateAlerts').innerHTML = '<p>没有数据更新提醒。</p>';
+                
+                showNotification('所有通知已清除。', 'success');
+            }
+        }
+        
+        // 显示通知
+        function showNotification(message, type = 'info') {
+            const modal = document.getElementById('notificationModal');
+            const content = document.getElementById('notificationContent');
+            
+            let icon = 'info-circle';
+            let title = '系统通知';
+            
+            if (type === 'error') {
+                icon = 'exclamation-circle';
+                title = '错误';
+            } else if (type === 'warning') {
+                icon = 'exclamation-triangle';
+                title = '警告';
+            } else if (type === 'success') {
+                icon = 'check-circle';
+                title = '成功';
+            }
+            
+            content.innerHTML = `
+                <h4 style="margin-bottom: 15px; color: var(--primary-blue);">
+                    <i class="fas fa-${icon}"></i> ${title}
+                </h4>
+                <p style="white-space: pre-line;">${message}</p>
+            `;
+            
+            modal.style.display = 'flex';
+        }
+        
+        // 显示通知中心
+        function showNotifications() {
+            const modal = document.getElementById('notificationModal');
+            const content = document.getElementById('notificationContent');
+            
+            // 收集所有警报
+            let allAlerts = '';
+            
+            // 黑油警报
+            blackOilData.forEach(item => {
+                if (item.remaining <= 500) {
+                    allAlerts += `车牌: ${item.plate}\n剩余: ${item.remaining}km 黑油需要更换\n\n`;
+                } else if (item.remaining <= 1000) {
+                    allAlerts += `车牌: ${item.plate}\n剩余: ${item.remaining}km 黑油提醒\n\n`;
+                }
+            });
+            
+            // 齿轮油警报
+            gearOilData.forEach(item => {
+                if (item.remaining <= 5000) {
+                    allAlerts += `车牌: ${item.plate}\n剩余: ${item.remaining}km 齿轮油需要更换\n\n`;
+                } else if (item.remaining <= 10000) {
+                    allAlerts += `车牌: ${item.plate}\n剩余: ${item.remaining}km 齿轮油提醒\n\n`;
+                }
+            });
+            
+            // 更新提醒
+            const today = new Date();
+            blackOilData.forEach(item => {
+                if (item.updateDate) {
+                    const update = new Date(item.updateDate);
+                    const diffTime = Math.abs(today - update);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays > 3) {
+                        allAlerts += `车牌: ${item.plate}\n最后更新: ${item.updateDate}\n需要更新消耗数据\n\n`;
+                    }
+                }
+            });
+            
+            gearOilData.forEach(item => {
+                if (item.updateDate) {
+                    const update = new Date(item.updateDate);
+                    const diffTime = Math.abs(today - update);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays > 3) {
+                        allAlerts += `车牌: ${item.plate}\n最后更新: ${item.updateDate}\n需要更新消耗数据\n\n`;
+                    }
+                }
+            });
+            
+            if (allAlerts) {
+                content.innerHTML = `
+                    <h4 style="margin-bottom: 15px; color: var(--primary-blue);">
+                        <i class="fas fa-bell"></i> 所有系统警报
+                    </h4>
+                    <p style="white-space: pre-line;">${allAlerts}</p>
+                `;
+            } else {
+                content.innerHTML = `
+                    <h4 style="margin-bottom: 15px; color: var(--primary-blue);">
+                        <i class="fas fa-check-circle"></i> 没有警报
+                    </h4>
+                    <p>当前没有需要处理的警报。</p>
+                `;
+            }
+            
+            modal.style.display = 'flex';
+        }
+        
+        // 关闭通知模态框
+        function closeNotificationModal() {
+            document.getElementById('notificationModal').style.display = 'none';
+        }
+        
+        // 更新最后检查时间
+        function updateLastCheckTime() {
+            const now = new Date();
+            const timeString = now.toLocaleDateString('zh-CN') + ' ' + now.toLocaleTimeString('zh-CN');
+            document.getElementById('lastCheckTime').textContent = timeString;
+        }
+        
+        // 导出黑油数据
+        function exportBlackOil() {
+            const dataStr = JSON.stringify(blackOilData, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            const exportFileDefaultName = 'black-oil-data.json';
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            
+            showNotification('黑油数据已导出为JSON文件。', 'success');
+        }
+        
+        // 导出齿轮油数据
+        function exportGearOil() {
+            const dataStr = JSON.stringify(gearOilData, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            const exportFileDefaultName = 'gear-oil-data.json';
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            
+            showNotification('齿轮油数据已导出为JSON文件。', 'success');
+        }
+        
+        // 导出预测值数据
+        function exportPredictions() {
+            const dataStr = JSON.stringify(predictionData, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            const exportFileDefaultName = 'prediction-data.json';
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            
+            showNotification('预测值数据已导出为JSON文件。', 'success');
+        }
+        
+        // 保存数据到localStorage
+        function saveData() {
+            localStorage.setItem('blackOilData', JSON.stringify(blackOilData));
+            localStorage.setItem('gearOilData', JSON.stringify(gearOilData));
+            localStorage.setItem('predictionData', JSON.stringify(predictionData));
+        }
+    </script>
+</body>
+</html>
