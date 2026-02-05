@@ -9,9 +9,9 @@
     <meta name="theme-color" content="#1a73e8">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="./style.css">
-    <script src="./app.js" defer></script>
     <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -1821,5 +1821,6 @@
             localStorage.setItem('predictionData', JSON.stringify(predictionData));
         }
     </script>
+<script src="./app.js" defer></script>
 </body>
 </html>
